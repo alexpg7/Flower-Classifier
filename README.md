@@ -112,6 +112,33 @@ tulips: 799 Images
 
 Now, our training and validation datasets are contained in the paths pointed by ``train_dir`` and ``val_dir``.
 
+```output
+/
+└── root/
+    └── .keras/
+        └── datasets/
+            └── flower_photos_extracted/
+                └── flower_photos/
+                    ├── daisy
+                    ├── dandelion
+                    ├── roses
+                    ├── sunflowers
+                    ├── tulips
+                    ├── train/
+                    │   ├── daisy
+                    │   ├── dandelion
+                    │   ├── roses
+                    │   ├── sunflowers
+                    │   └── tulips
+                    └── val/
+                        ├── daisy
+                        ├── dandelion
+                        ├── roses
+                        ├── sunflowers
+                        └── tulips
+```
+
+
 ## 1️⃣First model (overfitted)
 
 To see an example of a simple model, we will train a neural network and will observe how it overfits. This is really common when beggining to work with neural networks. It is a phenomonon that is hard to avoid if you do not know where does it come from and how the network is designed internally.
@@ -154,3 +181,87 @@ val_data_gen = image_gen_val.flow_from_directory(batch_size=batch_size,
 Found 735 images belonging to 5 classes.
 ```
 
+### 🧠Creating the Neural Network
+
+As we said, we will be using a convolutional one. Basically it consists of some layers that operate ([convolution](https://en.wikipedia.org/wiki/Convolution)) the image with some filters (the weight functions, mathematically) and output a new image. After each convolution we will apply a [MaxPooling layer](https://en.wikipedia.org/wiki/Pooling_layer), which chooses the highest value out of the dimensions we indicate it. In our case, each MaxPooling layer will have dimensions 2x2, which means that the resulting image will have half the size (1/4 of the area). 
+
+We will apply the same combination 3 times, using 16, 32 and 64 filters respectively. Also, we will use the relu [activation function](https://en.wikipedia.org/wiki/Rectifier_(neural_networks)), which allows us to capture the non-linear behaviour.
+
+After that, We will flatten all the image components and apply dense layers until it reaches de desired size: 5 (for the 5 types of flowers).
+
+```Python
+model1 = Sequential()
+
+model1.add(Conv2D(16, 3, padding='same', activation='relu', input_shape=(IMG_SHAPE,IMG_SHAPE, 3)))
+model1.add(MaxPooling2D(pool_size=(2, 2)))
+
+model1.add(Conv2D(32, 3, padding='same', activation='relu'))
+model1.add(MaxPooling2D(pool_size=(2, 2)))
+
+model1.add(Conv2D(64, 3, padding='same', activation='relu'))
+model1.add(MaxPooling2D(pool_size=(2, 2)))
+
+model1.add(Flatten())
+model1.add(Dense(512, activation='relu'))
+
+model1.add(Dense(5))
+```
+
+We can visualize how the model is built with the ``.summary()`` method.
+
+```Python
+model1.summary()
+```
+```output
+Model: "sequential_1"
+
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━┓
+┃ Layer (type)                    ┃ Output Shape           ┃       Param # ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━┩
+│ conv2d_3 (Conv2D)               │ (None, 150, 150, 16)   │           448 │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ max_pooling2d_3 (MaxPooling2D)  │ (None, 75, 75, 16)     │             0 │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ conv2d_4 (Conv2D)               │ (None, 75, 75, 32)     │         4,640 │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ max_pooling2d_4 (MaxPooling2D)  │ (None, 37, 37, 32)     │             0 │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ conv2d_5 (Conv2D)               │ (None, 37, 37, 64)     │        18,496 │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ max_pooling2d_5 (MaxPooling2D)  │ (None, 18, 18, 64)     │             0 │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ flatten_1 (Flatten)             │ (None, 20736)          │             0 │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ dense_2 (Dense)                 │ (None, 512)            │    10,617,344 │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ dense_3 (Dense)                 │ (None, 5)              │         2,565 │
+└─────────────────────────────────┴────────────────────────┴───────────────┘
+
+ Total params: 10,643,493 (40.60 MB)
+
+ Trainable params: 10,643,493 (40.60 MB)
+
+ Non-trainable params: 0 (0.00 B)
+```
+
+Now, we compile the model and set up how we want it to be trained. The optimizer will be the ``adam`` one (it is the most usual for simple neural networks. The loss function (which ``adam`` will try to minimize) will be the [sparse categorical cross entropy ](https://en.wikipedia.org/wiki/Cross-entropy). This one is basically a way to quantify how sure are we that we guessed the right type of flower.
+
+```Python
+model1.compile(optimizer='adam',
+              loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+              metrics=['accuracy'])
+```
+
+Finally, we train the model with 80 epochs (the times the network will look at our data) and track the validation with the validation set (``val_data_gen``) using the ``.fit`` method.
+
+```Python
+epochs = 80
+
+history = model1.fit(
+    train_data_gen,
+    steps_per_epoch=int(np.ceil(train_data_gen.n / float(batch_size))),
+    epochs=epochs,
+    validation_data=val_data_gen,
+    validation_steps=int(np.ceil(val_data_gen.n / float(batch_size)))
+)
+```
