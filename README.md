@@ -269,7 +269,7 @@ history = model1.fit(
 )
 ```
 
-After approximately X minutes, we have our model trained. We can plot the accuracies and loss functions of the different trainig/validation sets/:
+After approximately 11 minutes, we have our model trained. We can plot the accuracies and loss functions of the different trainig/validation sets:
 
 ```Python
 # define the y values of the plots
@@ -298,16 +298,176 @@ plt.legend(loc='upper right')
 plt.title('Training and Validation Loss')
 plt.show()
 ```
-
-<img src="./plots/plots1.png" alt="Alt text" width="840" height="340"/>
-
 ![til](./plots/plots1.png)
 
-Text here (overtraining, etc)
+As it can be seen, both accuracies begin to grow with the same rate at the beggining. When reaching 4 epochs, both curves get separated (the same happens with the loss function). The validation accuracy gets stuck at ~65%, while the training one grows up to ~100%.
 
-<img src="https://hackernoon.imgix.net/hn-images/1*SBUK2QEfCP-zvJmKm14wGQ.png?w=1200" alt="Alt text" width="981" height="451"/>
+This phenomenon is called **overfitting**. Basically, our model has learned the training set so perfectly that fails at predicting data outside of it. We now have the task to improve the model using overfitting avoidance techniques.
+
+<img src="https://hackernoon.imgix.net/hn-images/1*SBUK2QEfCP-zvJmKm14wGQ.png?w=1200" alt="Alt text" width="581" height="451"/>
 
 ## 2️⃣Second model
 
-The problem of the first one was overfitting. There are [different techniques](https://hackernoon.com/memorizing-is-not-learning-6-tricks-to-prevent-overfitting-in-machine-learning-820b091dc42) to avoiod it, we will use 
+The problem of the first one was overfitting. There are [different techniques](https://hackernoon.com/memorizing-is-not-learning-6-tricks-to-prevent-overfitting-in-machine-learning-820b091dc42) to avoiod it, we will use **data augmentation** and **dropout**. We will explan them a little bit to get more context.
 
+### ⏫Data augmentation
+
+This tecnique consists basically on modifying a little bit the data that is used to train in each batch. This can be achieved easily using the ``image data generator``. This time, we will call the function ``ImageDataGenerator`` with more arguments.
+
+As before, we still use the rescaling (1/255), and add more features:
+
+* **Rotation range**: rotates randomly the image between 0 and the angle we want (45º).
+* **Width/Height shift range**: stretches the image dimensions randomly within a percentage (15%).
+* **Horizontal flip**: Randomly, flips the image horizzontally.
+* **Zoom range**: Makes a zoom to the image within a certain percentage (50%).
+
+```Python
+image_gen_train = ImageDataGenerator(
+                    rescale=1./255,
+                    rotation_range=45,
+                    width_shift_range=.15,
+                    height_shift_range=.15,
+                    horizontal_flip=True,
+                    zoom_range=0.5
+                    )
+
+
+train_data_gen = image_gen_train.flow_from_directory(
+                                                batch_size=batch_size,
+                                                directory=train_dir,
+                                                shuffle=True,
+                                                target_size=(IMG_SHAPE,IMG_SHAPE),
+                                                class_mode='sparse'
+                                                )
+```
+```output
+Found 2935 images belonging to 5 classes.
+```
+
+We can now plot 5 different examples of how these transformations are applied randomply each time we call the ``train_data_gen`` variable (which is an ``ImageDataGenerator``).
+
+```Python
+def plotImages(images_arr):
+    fig, axes = plt.subplots(1, 5, figsize=(20,20))
+    axes = axes.flatten()
+    for img, ax in zip(images_arr, axes):
+        ax.imshow(img)
+    plt.tight_layout()
+    plt.show()
+
+augmented_images = [train_data_gen[0][0][0] for i in range(5)]
+plotImages(augmented_images)
+```
+
+The validation set stays the same, since it is not used for training (it will not change the overfitting conditions).
+
+### 💧Dropout
+
+This other technique consists on deactivating some of the neurons during the training. This is something that we implement inside the model while deciding its architecture. For our case, we will put dropout layers right at the end, before each dense layer.
+
+<img src="https://hackernoon.imgix.net/hn-images/1*DfrGMZdwpRQITkdmOtKwtg.jpeg?w=1200" alt="Alt text" width="581" height="301"/>
+
+```Python
+model2 = Sequential()
+
+model2.add(Conv2D(16, 3, padding='same', activation='relu', input_shape=(IMG_SHAPE,IMG_SHAPE, 3)))
+model2.add(MaxPooling2D(pool_size=(2, 2)))
+
+model2.add(Conv2D(32, 3, padding='same', activation='relu'))
+model2.add(MaxPooling2D(pool_size=(2, 2)))
+
+model2.add(Conv2D(64, 3, padding='same', activation='relu'))
+model2.add(MaxPooling2D(pool_size=(2, 2)))
+
+model2.add(Flatten())
+model2.add(Dropout(0.2))
+model2.add(Dense(512, activation='relu'))
+
+model2.add(Dropout(0.2))
+model2.add(Dense(5))
+
+model2.summary()
+```
+```output
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━┓
+┃ Layer (type)                    ┃ Output Shape           ┃       Param # ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━┩
+│ conv2d_3 (Conv2D)               │ (None, 150, 150, 16)   │           448 │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ max_pooling2d_3 (MaxPooling2D)  │ (None, 75, 75, 16)     │             0 │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ conv2d_4 (Conv2D)               │ (None, 75, 75, 32)     │         4,640 │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ max_pooling2d_4 (MaxPooling2D)  │ (None, 37, 37, 32)     │             0 │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ conv2d_5 (Conv2D)               │ (None, 37, 37, 64)     │        18,496 │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ max_pooling2d_5 (MaxPooling2D)  │ (None, 18, 18, 64)     │             0 │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ flatten_1 (Flatten)             │ (None, 20736)          │             0 │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ dropout (Dropout)               │ (None, 20736)          │             0 │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ dense_2 (Dense)                 │ (None, 512)            │    10,617,344 │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ dropout_1 (Dropout)             │ (None, 512)            │             0 │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ dense_3 (Dense)                 │ (None, 5)              │         2,565 │
+└─────────────────────────────────┴────────────────────────┴───────────────┘
+
+ Total params: 10,643,493 (40.60 MB)
+
+ Trainable params: 10,643,493 (40.60 MB)
+
+ Non-trainable params: 0 (0.00 B)
+```
+### 🏃Training
+
+After all this, we recompile and train the new model.
+
+```Python
+model2.compile(optimizer='adam',
+              loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+              metrics=['accuracy'])
+```
+```Python
+epochs = 80
+
+history = model2.fit(
+    train_data_gen,
+    steps_per_epoch=int(np.ceil(train_data_gen.n / float(batch_size))),
+    epochs=epochs,
+    validation_data=val_data_gen,
+    validation_steps=int(np.ceil(val_data_gen.n / float(batch_size)))
+)
+```
+
+After X minutes, the model is completely trained. Again, we can plot the accuracies and loss functions:
+
+```Python
+# define the y values of the plots
+acc = history.history['accuracy']
+val_acc = history.history['val_accuracy']
+
+loss = history.history['loss']
+val_loss = history.history['val_loss']
+
+# define the x values
+epochs_range = range(epochs)
+
+# plot accuracy
+plt.figure(figsize=(12, 5))
+plt.subplot(1, 2, 1)
+plt.plot(epochs_range, acc, label='Training Accuracy')
+plt.plot(epochs_range, val_acc, label='Validation Accuracy')
+plt.legend(loc='best')
+plt.title('Training and Validation Accuracy')
+
+# plot loss
+plt.subplot(1, 2, 2)
+plt.plot(epochs_range, loss, label='Training Loss')
+plt.plot(epochs_range, val_loss, label='Validation Loss')
+plt.legend(loc='best')
+plt.title('Training and Validation Loss')
+plt.show()
+```
