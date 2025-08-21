@@ -301,9 +301,11 @@ plt.show()
 
 <img src="./plots/plots1.png" alt="Alt text" width="840" height="340"/>
 
+![til](./plots/plots1.png)
+
 Text here (overtraining, etc)
 
-<img src="https://hackernoon.imgix.net/hn-images/1*SBUK2QEfCP-zvJmKm14wGQ.png?w=1200" alt="Alt text" width="640" height="340"/>
+<img src="https://hackernoon.imgix.net/hn-images/1*SBUK2QEfCP-zvJmKm14wGQ.png?w=1200" alt="Alt text" width="981" height="451"/>
 
 ## 2️⃣Second model
 
