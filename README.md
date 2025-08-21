@@ -475,4 +475,4 @@ plt.show()
 ```
 ![til](./plots/plots2.png)
 
-Is overfitting stil there? Of course, but this time it has gotten much better. This time we reached 75% of accuracy in the validation, which is much better. This means that our model predicts correctly 3 out of 4 attempts, which is an impressive result for such a simple neural network.
+Is overfitting stil there? Of course, but this time it has gotten much better. This time we reached 75% of accuracy in the validation, which is a significant improve. This means that our model predicts correctly 3 out of 4 attempts, which is an impressive result for such a simple neural network.
