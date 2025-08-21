@@ -16,6 +16,9 @@ The goal of the model will be to take an image of a flower and output a probabil
 
 **EXAMPLE HERE**
 
+> [!TIP]
+> I recommend executing this Jupyter notebook in a [google colab](https://colab.google/) environment, using a GPU T4.
+
 ## 🔰Setting up the modules
 
 The modules that we will use are the usuals:
@@ -265,3 +268,44 @@ history = model1.fit(
     validation_steps=int(np.ceil(val_data_gen.n / float(batch_size)))
 )
 ```
+
+After approximately X minutes, we have our model trained. We can plot the accuracies and loss functions of the different trainig/validation sets/:
+
+```Python
+# define the y values of the plots
+acc = history.history['accuracy']
+val_acc = history.history['val_accuracy']
+
+loss = history.history['loss']
+val_loss = history.history['val_loss']
+
+# define the x values
+epochs_range = range(epochs)
+
+# plot accuracy
+plt.figure(figsize=(8, 8))
+plt.subplot(1, 2, 1)
+plt.plot(epochs_range, acc, label='Training Accuracy')
+plt.plot(epochs_range, val_acc, label='Validation Accuracy')
+plt.legend(loc='lower right')
+plt.title('Training and Validation Accuracy')
+
+# plot loss
+plt.subplot(1, 2, 2)
+plt.plot(epochs_range, loss, label='Training Loss')
+plt.plot(epochs_range, val_loss, label='Validation Loss')
+plt.legend(loc='upper right')
+plt.title('Training and Validation Loss')
+plt.show()
+```
+
+<img src="./plots/plots1.png" alt="Alt text" width="840" height="340"/>
+
+Text here (overtraining, etc)
+
+<img src="https://hackernoon.imgix.net/hn-images/1*SBUK2QEfCP-zvJmKm14wGQ.png?w=1200" alt="Alt text" width="640" height="340"/>
+
+## 2️⃣Second model
+
+The problem of the first one was overfitting. There are [different techniques](https://hackernoon.com/memorizing-is-not-learning-6-tricks-to-prevent-overfitting-in-machine-learning-820b091dc42) to avoiod it, we will use 
+
