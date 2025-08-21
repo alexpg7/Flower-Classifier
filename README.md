@@ -359,6 +359,8 @@ augmented_images = [train_data_gen[0][0][0] for i in range(5)]
 plotImages(augmented_images)
 ```
 
+![til](./plots/augmentation.png)
+
 The validation set stays the same, since it is not used for training (it will not change the overfitting conditions).
 
 ### 💧Dropout
@@ -442,7 +444,7 @@ history = model2.fit(
 )
 ```
 
-After X minutes, the model is completely trained. Again, we can plot the accuracies and loss functions:
+After 40 minutes, the model is completely trained. Again, we can plot the accuracies and loss functions:
 
 ```Python
 # define the y values of the plots
@@ -471,3 +473,6 @@ plt.legend(loc='best')
 plt.title('Training and Validation Loss')
 plt.show()
 ```
+![til](./plots/plots2.png)
+
+Is overfitting stil there? Of course, but this time it has gotten much better. This time we reached 75% of accuracy in the validation, which is much better. This means that our model predicts correctly 3 out of 4 attempts, which is an impressive result for such a simple neural network.
