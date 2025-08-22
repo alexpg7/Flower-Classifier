@@ -475,4 +475,129 @@ plt.show()
 ```
 ![til](./plots/plots2.png)
 
-Is overfitting stil there? Of course, but this time it has gotten much better. This time we reached 75% of accuracy in the validation, which is a significant improve. This means that our model predicts correctly 3 out of 4 attempts, which is an impressive result for such a simple neural network.
+Is overfitting stil there? Of course, but this time it has gotten much better. This time we reached 81% of accuracy in the validation, which is a significant improve. This means that our model predicts correctly 4 out of 5 attempts, which is an impressive result for such a simple neural network.
+
+## 💾Saving the model
+
+Now that we have a functional model, we can save it into a ``.keras`` file that will contain all the information about it. The goal of this step is to have a start point whenever we want to continue using the model without having to train it again.
+
+To do so, we use the ``.save`` method specifying the path where we want it to save.
+
+```Python
+import time
+
+# use the timestamp to track the "version"
+path = "./flowerclassifier_" + str(time.time()) + ".keras"
+model2.save(path)
+```
+
+We can also load it into another variable and use to test it with our own images.
+
+```Python
+model3 = tf.keras.models.load_model(path)
+model3.summary()
+```
+```output
+Model: "sequential"
+
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━┓
+┃ Layer (type)                    ┃ Output Shape           ┃       Param # ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━┩
+│ conv2d (Conv2D)                 │ (None, 150, 150, 16)   │           448 │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ max_pooling2d (MaxPooling2D)    │ (None, 75, 75, 16)     │             0 │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ conv2d_1 (Conv2D)               │ (None, 75, 75, 32)     │         4,640 │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ max_pooling2d_1 (MaxPooling2D)  │ (None, 37, 37, 32)     │             0 │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ conv2d_2 (Conv2D)               │ (None, 37, 37, 64)     │        18,496 │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ max_pooling2d_2 (MaxPooling2D)  │ (None, 18, 18, 64)     │             0 │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ flatten (Flatten)               │ (None, 20736)          │             0 │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ dropout (Dropout)               │ (None, 20736)          │             0 │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ dense (Dense)                   │ (None, 512)            │    10,617,344 │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ dropout_1 (Dropout)             │ (None, 512)            │             0 │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ dense_1 (Dense)                 │ (None, 5)              │         2,565 │
+└─────────────────────────────────┴────────────────────────┴───────────────┘
+
+ Total params: 31,930,481 (121.81 MB)
+
+ Trainable params: 10,643,493 (40.60 MB)
+
+ Non-trainable params: 0 (0.00 B)
+
+ Optimizer params: 21,286,988 (81.20 MB)
+```
+
+As you can see, now, the optimizer information is also contained into the model. With this, we can continue training it from another starting point.
+
+## 🧪Making our own tests
+
+Now, we can try the neural network with some image. For example, this one:
+
+<img src="https://www.gardenia.net/wp-content/uploads/2024/01/shutterstock_2084235901.jpg" alt="Alt text" width="381" height="251"/>
+
+To do so, we have to resize it to 150x150 px.
+
+We can build a function that takes an image link and the expected prediction and returns a plot of the probability distribution, marking in green if the prediction is successful.
+
+```Python
+import requests
+
+def Plotpred(prediction):
+  probability = tf.nn.softmax(prediction[0][0], axis=-1).numpy()
+  colorTrue = "#00AF3A"
+  colorFalse = "#AF0000"
+  colorOther = "#949494"
+  color = []
+  max = np.max(probability)
+  classes = ["daisy", "dandelion", "roses", "sunflowers", "tulips"]
+  pred = prediction[1]
+  for prob, typee in zip(probability, classes):
+    if typee == pred and prob == max:
+      color.append(colorTrue)
+    elif typee != pred and prob == max:
+      color.append(colorFalse)
+    else:
+      color.append(colorOther)
+  plt.bar(classes, probability, color=color)
+  plt.ylabel("Probability")
+  plt.title("Classification")
+  plt.show()
+
+def Probplot(link, typee):
+  url = link
+  response = requests.get(url)
+  image_bytes = response.content
+
+  # decode image
+  img_tensor = tf.image.decode_image(image_bytes, channels=3)
+  img_tensor = tf.image.resize(img_tensor, [IMG_SHAPE, IMG_SHAPE])
+  img_tensor = tf.expand_dims(img_tensor, axis=0)  # Add batch dimension
+  img_tensor = tf.cast(img_tensor, tf.float32) / 255.0
+  return Plotpred([model3.predict(img_tensor), typee])
+```
+
+```Python
+Probplot("https://www.gardenia.net/wp-content/uploads/2024/01/shutterstock_2084235901.jpg", "sunflowers")
+```
+
+<img src="./plots/bar1.png" alt="Alt text" width="381" height="251"/>
+
+As it can be seen, the prediction has been successful. Let's now try with a more difficult example. For example, this image:
+
+<img src="https://cdn.sanity.io/images/pn4rwssl/production/59c9dcc506862017ff8d7c237673bdafeba27487-500x750.jpg?w=2880&q=75&auto=format" alt="Alt text" width="181" height="251"/>
+
+```Python
+Probplot("https://cdn.sanity.io/images/pn4rwssl/production/59c9dcc506862017ff8d7c237673bdafeba27487-500x750.jpg?w=2880&q=75&auto=format", "tulips")
+```
+
+<img src="./plots/bar2.png" alt="Alt text" width="381" height="251"/>
+
+This time, the classificator fails with high confidence. This is due to the fact that photos of roses are usually taken with the same image composition and similar colors.
